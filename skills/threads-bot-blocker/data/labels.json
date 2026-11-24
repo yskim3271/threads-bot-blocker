@@ -1,0 +1,12 @@
+{
+ "schema": "threads-bot-blocker/reply-labels@3.0",
+ "label_values": {
+  "reply_bot": "복붙·자동 댓글 봇 → 기대 🔴(≥75)",
+  "reply_sales": "기생 영업·제휴·자사 링크 답글러 → 기대 🟠(50~74)",
+  "reply_template": "시그니처·템플릿 답글(호스트 포함) → <50",
+  "pumasi": "품앗이 답글러(사람 운영) → <50 + 🤝 라벨",
+  "human": "일반 인간 → 🟢(<25)",
+  "human_fast": "고속 단문 인간(대조군) → 🟢(<25)"
+ },
+ "labels": []
+}

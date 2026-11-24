@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# 런타임 데이터는 스킬 밖(~/.threads-bot-blocker/)에 저장되지만, 실수로 복사된 경우 대비
+.threads-bot-blocker/
+runs/
+*.log
+reply_results*.json
+block_log*.json
+feed_comments*.json
+replies*.json
+accounts*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
