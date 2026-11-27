@@ -35,27 +35,27 @@ You get a plain-Korean CLI report with a direct link to every suspicious comment
 
 </div>
 
-Below is a real home-feed scan (12 posts · 88 commenters · 9 flagged · 5 approved blocks). Handles, links and third-party app names are irreversibly mosaicked—the original glyphs were never rendered.
+Below is a real v4.0 scan of my 5 most recent posts (12 commenters · 4 flagged: **2 🔴 block recommended · 1 🟠 review · 1 🟡 watch** · 2 approved blocks). Handles, links and proper nouns are irreversibly mosaicked—the original glyphs were never rendered.
 
-### 1. Bot-magnet feed scan
-"Find reply bots" → "Let's do 12": opens the 12 highest-yield posts (AI/dev, problem → fix, questions; 3+ replies), gathers 151 comments and 20 candidate commenters, then collects each commenter's profile and 15 recent replies (read-only).
+### 1. Recent-post scan & evidence packets
+"Check my last 5 posts": opens the comment sections of your 5 most recent root posts, picks out 12 commenters, then collects each one's public profile with SSR recent root posts and up to 15 recent replies (read-only) into a blind `evidence_packets.json`.
 
-<img src="assets/showcase/01_scan_start.png" width="100%" alt="STEP 1: bot-magnet feed scan">
+<img src="assets/showcase/01_scan_start.png" width="100%" alt="STEP 1: recent-post scan and evidence packets">
 
-### 2. Plain-Korean report with direct links
-`88 scanned · 9 flagged`: aligned summary table, evidence quotes with plain-Korean explanations and direct clickable comment links, plus a two-line block guide. Normal accounts stay out of the way.
+### 2. v4.0 report with VG1-verified quotes
+`12 scanned · 4 flagged` (`90 🔴`, `82 🔴`, `56 🟠`, `32 🟡`): aligned summary table, then VG1-verified evidence quotes—a pinned root post and a reply where the account admits an AI assistant runs it, plus direct clickable comment links—and a two-line block guide. Normal accounts stay out of the way.
 
-<img src="assets/showcase/02_bot_report.png" width="100%" alt="STEP 2: reply-bot report">
+<img src="assets/showcase/02_bot_report.png" width="100%" alt="STEP 2: v4.0 reply-bot report">
 
 ### 3. Bulk block refused (safety guardrail)
-"Block them all." is never executed. The agent refuses bulk blocking, re-displays the list, and asks for explicit numbers or `@handles` (max 5 per turn).
+"Block them all." is never executed. The agent refuses bulk blocking, re-displays the 4 flagged accounts, and asks for explicit numbers or `@handles` (max 5 per turn).
 
 <img src="assets/showcase/03_safety_guard.png" width="100%" alt="STEP 3: bulk block refused">
 
 ### 4. Verified 1-by-1 blocks
-"Block 1/2/3/4/5": checks the profile handle match → `⋯` → Block → announces before confirming → verifies the `Unblock` state, 5/5 complete, logged to `block_log.json`.
+"Block #1 and #2": checks the profile handle match → `⋯` → Block → announces before confirming → verifies the `Unblock` state, 2/2 complete, logged to `block_log.json`. The remaining #3 and #4 stay untouched until you approve them.
 
-<img src="assets/showcase/04_hitl_block.png" width="100%" alt="STEP 4: five approved accounts blocked and verified one at a time">
+<img src="assets/showcase/04_hitl_block.png" width="100%" alt="STEP 4: two approved accounts blocked and verified one at a time">
 
 ## Quick Start
 
