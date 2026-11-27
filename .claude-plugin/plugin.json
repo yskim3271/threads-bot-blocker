@@ -1,0 +1,10 @@
+{
+  "name": "threads-bot-blocker",
+  "version": "4.0.0",
+  "description": "Evidence-grounded, LLM-first agent skill to detect Threads reply bots (copy-paste spam, AI parrot/secretary replies, parasitic shopping links) with verbatim quote verification (VG1), hard-fact guardrails (VG2-VG5), and strict human-in-the-loop blocking.",
+  "author": { "name": "Yunsik Kim", "url": "https://github.com/yskim3271" },
+  "homepage": "https://github.com/yskim3271/threads-bot-blocker",
+  "repository": "https://github.com/yskim3271/threads-bot-blocker",
+  "license": "MIT",
+  "keywords": ["threads", "bot-detection", "agent-skill", "claude-code", "antigravity", "human-in-the-loop", "python", "reply-bot"]
+}

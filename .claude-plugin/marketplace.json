@@ -1,0 +1,18 @@
+{
+  "name": "threads-bot-blocker",
+  "owner": { "name": "yskim3271" },
+  "metadata": {
+    "description": "Evidence-grounded Threads reply-bot detection with verbatim quote verification and strict human-in-the-loop blocking.",
+    "version": "4.0.0"
+  },
+  "plugins": [
+    {
+      "name": "threads-bot-blocker",
+      "source": "./",
+      "description": "Agent skill (v4.0): detects Threads reply bots via blind evidence packets, holistic LLM judgment, VG1 verbatim quote grounding, VG2-VG5 guardrails, plain-Korean CLI reports with direct comment links, and 1-by-1 verified HITL blocking.",
+      "version": "4.0.0",
+      "strict": false,
+      "skills": ["./skills/threads-bot-blocker"]
+    }
+  ]
+}

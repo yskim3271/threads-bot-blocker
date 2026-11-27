@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Home feed bot-magnet scan">
+  <rect width="48" height="48" rx="11" fill="#0f172a"/>
+  <rect x=".5" y=".5" width="47" height="47" rx="10.5" fill="none" stroke="#38bdf8" stroke-opacity=".42"/>
+  <!-- feed rows + magnifier spotting a bot dot -->
+  <rect x="8.5" y="9.5" width="24" height="7.5" rx="2.2" fill="none" stroke="#38bdf8" stroke-width="1.8"/>
+  <rect x="8.5" y="20.2" width="24" height="7.5" rx="2.2" fill="none" stroke="#38bdf8" stroke-width="1.8"/>
+  <rect x="8.5" y="30.9" width="13" height="7.5" rx="2.2" fill="none" stroke="#38bdf8" stroke-width="1.8"/>
+  <circle cx="12.6" cy="13.25" r="1.5" fill="#7dd3fc"/><path d="M16.2 13.25h12.4" stroke="#7dd3fc" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
+  <circle cx="12.6" cy="23.95" r="1.5" fill="#7dd3fc"/><path d="M16.2 23.95h8.4" stroke="#7dd3fc" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
+  <circle cx="12.6" cy="34.65" r="1.5" fill="#7dd3fc"/>
+  <circle cx="32" cy="31.5" r="6.4" fill="#0f172a" stroke="#e0f2fe" stroke-width="2.2"/>
+  <circle cx="32" cy="31.5" r="2.2" fill="#f43f5e"/>
+  <path d="m36.8 36.3 3.6 3.6" stroke="#e0f2fe" stroke-width="2.8" stroke-linecap="round"/>
+</svg>

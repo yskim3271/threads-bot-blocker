@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="threads-bot-blocker">
+  <defs>
+    <linearGradient id="tbbS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#67e8f9"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient>
+    <linearGradient id="tbbB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f97316"/></linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="11" fill="#0f172a"/>
+  <rect x=".5" y=".5" width="47" height="47" rx="10.5" fill="none" stroke="#38bdf8" stroke-opacity=".38"/>
+  <path d="M24 7.2 37.2 12v10.4c0 8.7-5.7 15.4-13.2 18.3-7.5-2.9-13.2-9.6-13.2-18.3V12Z" fill="#38bdf8" fill-opacity=".08" stroke="url(#tbbS)" stroke-width="2.3" stroke-linejoin="round"/>
+  <path d="M17.6 16.6h12.8a3 3 0 0 1 3 3v6.2a3 3 0 0 1-3 3h-6.2l-4.3 3.6v-3.6h-2.3a3 3 0 0 1-3-3v-6.2a3 3 0 0 1 3-3Z" fill="url(#tbbB)"/>
+  <path d="m19.7 22.7 2.9 2.8 5.8-5.7" fill="none" stroke="#1a0f02" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="35.6" cy="9.6" r="2.4" fill="#f43f5e"/>
+  <circle cx="35.6" cy="9.6" r="4.4" fill="none" stroke="#f43f5e" stroke-opacity=".45" stroke-width="1.1"/>
+</svg>

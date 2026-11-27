@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Blocklist calibration and diff">
+  <rect width="48" height="48" rx="11" fill="#15112a"/>
+  <rect x=".5" y=".5" width="47" height="47" rx="10.5" fill="none" stroke="#a78bfa" stroke-opacity=".42"/>
+  <!-- three tuning sliders + diff marks -->
+  <path d="M13 10v28M24 10v28M35 10v28" stroke="#a78bfa" stroke-opacity=".5" stroke-width="2" stroke-linecap="round"/>
+  <rect x="9.5" y="25" width="7" height="6" rx="2" fill="#a78bfa"/>
+  <rect x="20.5" y="14" width="7" height="6" rx="2" fill="#c4b5fd"/>
+  <rect x="31.5" y="21" width="7" height="6" rx="2" fill="#a78bfa"/>
+</svg>
