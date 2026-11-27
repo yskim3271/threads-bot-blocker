@@ -19,42 +19,41 @@
 
 </div>
 
-**threads-bot-blocker v4.0은 누가 댓글 봇인지 에이전트가 판단하고, 그 이유를 원문 그대로 보여 주는 증거 기반 LLM 우선 하이브리드입니다.**
-스크립트가 댓글러마다 프로필, 최근 원글, 시간이 찍힌 최근 답글 15개를 모은 뒤, 점수가 하나도 없는 **블라인드 증거 패킷**으로 만들어 에이전트의 LLM에 넘깁니다.
-LLM은 패킷 전체를 읽고 종합 판정합니다. AI 비서 운영 고백, 예약된 듯한 몰아 달기 배치, 프로필과 답글의 모순, 공감+질문형 AI 문체, 남의 글에 붙는 쇼핑 링크까지 함께 봅니다.
-그다음 스크립트가 **모든 인용을 수집 원문과 글자 단위로 대조**하고(VG1, 지어낸 인용은 제외), 하드 팩트 가드레일(VG2~VG5)을 적용해 0~100점을 냅니다.
-결과는 의심 댓글마다 직접 링크가 붙은 쉬운 한국어 CLI 리포트로 나오고, 사용자가 계정을 직접 지목하기 전에는 아무것도 차단하지 않습니다. 차단도 1개씩 진행합니다.
+**threads-bot-blocker는 Threads 댓글창에 기생하는 댓글 봇, AI 자동 답글러, 영업 링크 도배 계정을 찾아내고 모든 판정을 원문 인용으로 증명합니다.**
+스크립트가 댓글러마다 프로필, 최근 원글, 시간이 찍힌 최근 답글 15개를 모아 점수 없는 **블라인드 증거 패킷**으로 에이전트의 LLM에 넘기면, LLM이 편향 없이 전체 맥락을 읽고 판정합니다.
+그다음 스크립트가 LLM이 든 인용을 수집 원문과 글자 단위로 대조하고(지어낸 인용은 즉시 제외), 안전 가드레일을 적용해 `0–100`점을 매깁니다.
+결과는 의심 댓글 직접 링크가 담긴 한국어 CLI 리포트로 출력되며, 사용자가 직접 지목해 승인하기 전에는 어떤 계정도 차단하지 않습니다.
 
 <a id="how-it-works"></a>
 ## 작동 방식
 
 <div align="center">
 
-<img src="assets/pipeline_diagram.png" width="100%" alt="v4.0 파이프라인: 수집, 증거 패킷, LLM 판정, 검증과 가드레일, 리포트와 HITL">
+<img src="assets/pipeline_diagram.png" width="100%" alt="파이프라인: 수집, 증거 패킷, LLM 판정, 검증과 가드레일, 리포트와 HITL">
 
-<sub>v4.0 5단계: <b>스크립트가 조사하고</b>(블라인드 증거) → <b>LLM이 판정하고</b>(원문 인용) → <b>스크립트가 검증하고</b>(VG1~VG5) → <b>사용자가 결정합니다</b>(승인한 계정만 1개씩 차단).</sub>
+<sub>5단계 파이프라인: <b>스크립트가 수집하고</b>(블라인드 증거) → <b>LLM이 판정하고</b>(원문 인용) → <b>스크립트가 검증하고</b>(원문 대조·가드레일) → <b>사용자가 결정합니다</b>(1개씩 승인 차단).</sub>
 
 </div>
 
-아래는 실제 내 최근 글 5개를 스캔한 4단계 흐름입니다(댓글러 12명 · 감지 4명: **🔴 차단권장 2 · 🟠 검토필요 1 · 🟡 관찰 1** · 승인 차단 2명). 핸들, 링크, 고유명사는 비가역 모자이크로 가렸습니다(원문 글자를 한 번도 그리지 않았습니다).
+실제 최근 글 5개를 스캔한 흐름입니다(댓글러 12명 · 감지 4명: **🔴 차단권장 2 · 🟠 검토필요 1 · 🟡 관찰 1** · 승인 차단 2명). 핸들과 링크는 비가역 모자이크 처리되었습니다.
 
 ### 1. 수집 & 패킷 생성
-"내 최근 5개 검사하자": 최근 본글 5개의 댓글창에서 댓글러 12명을 추리고, 계정마다 공개 프로필(SSR 최근 원글 포함)과 최근 답글 15개를 읽기 전용으로 수집해 블라인드 `evidence_packets.json`으로 묶습니다.
+`"내 최근 5개 검사하자"` 한마디로 최근 본글 5개의 댓글창에서 댓글러 12명을 추리고, 계정별 공개 프로필·최근 원글·답글 15개를 읽기 전용으로 수집합니다.
 
 <img src="assets/showcase/01_scan_start.png" width="100%" alt="STEP 1: 수집 및 패킷 생성">
 
 ### 2. 댓글 봇 진단 리포트
-`스캔 12명 · 감지 4명`(`90 🔴`, `82 🔴`, `56 🟠`, `32 🟡`): 칼정렬 요약표, 원문과 글자 단위로 대조한 증거 댓글(프로필 고정 원글·본인 답글의 AI 비서 운영 고백 포함), 클릭해 바로 확인할 수 있는 댓글 직접 링크, 차단 가이드 2줄만 깔끔하게 보여 줍니다(정상 계정은 기본 화면에서 숨깁니다).
+`스캔 12명 · 감지 4명`(`90 🔴`, `82 🔴`, `56 🟠`, `32 🟡`) 요약표와 함께 원문 대조를 마친 증거 댓글(고정 원글·답글의 AI 비서 운영 고백 포함), 클릭 가능한 댓글 직접 링크만 깔끔하게 보여 주며 정상 계정은 숨깁니다.
 
 <img src="assets/showcase/02_bot_report.png" width="100%" alt="STEP 2: 댓글 봇 진단 리포트">
 
 ### 3. 일괄 차단 거부
-"모두 차단해줘." 같은 일괄 요청은 바로 실행하지 않습니다. 감지된 4명 목록을 다시 보여 주고 차단할 번호나 `@핸들`을 직접 명시해 달라고 요구합니다(회당 최대 5개).
+`"모두 차단해줘."` 같은 일괄 요청은 즉시 거부합니다. 감지된 4명 목록을 다시 보여 주고 차단할 번호나 `@핸들`을 직접 지정해 달라고 요구합니다(회당 최대 5개).
 
 <img src="assets/showcase/03_safety_guard.png" width="100%" alt="STEP 3: 일괄 차단 거부">
 
 ### 4. 1개씩 승인·검증 차단
-"1/2번 계정 차단해줘": 계정마다 프로필 핸들 일치 확인 → `⋯` → 차단 → 확인 직전 재고지 → `차단 해제` 버튼 상태까지 2/2 검증한 뒤 `block_log.json`에 기록합니다. 남은 3·4번은 승인 전까지 건드리지 않습니다.
+`"1/2번 계정 차단해줘"`를 승인하면 프로필 핸들 일치 확인 → 차단 직전 재고지 → `차단 해제` 버튼 상태까지 2/2 검증한 뒤 `block_log.json`에 기록하고, 승인하지 않은 3·4번은 건드리지 않습니다.
 
 <img src="assets/showcase/04_hitl_block.png" width="100%" alt="STEP 4: 1개씩 승인 및 검증 차단">
 
@@ -91,11 +90,11 @@ git clone https://github.com/yskim3271/threads-bot-blocker
 cp -r threads-bot-blocker/skills/threads-bot-blocker ~/.claude/skills/
 ```
 
-**요구 사항.** Python 3.11+만 있으면 됩니다. 모든 스크립트가 표준 라이브러리만 씁니다. 댓글창을 읽으려면 읽기 전용 브라우저 하네스가 필요합니다. [`bsk`](skills/threads-bot-blocker/references/bsk_notes.md) CLI는 바로 연동되고, `aside`, Playwright / Chrome MCP, 브라우저 확장은 [표준 어댑터 계약](skills/threads-bot-blocker/references/browser_adapter.md)으로 붙습니다. 브라우저가 없어도 모드 3으로 공개 프로필을 진단할 수 있습니다. 본인 핸들은 하드코딩하지 않습니다. `--self <your_handle>`이나 `THREADS_SELF_HANDLE` 환경 변수로 넘깁니다.
+**요구 사항.** Python 3.11+(표준 라이브러리만 사용). 댓글창 수집에는 읽기 전용 브라우저 하네스가 필요합니다. [`bsk`](skills/threads-bot-blocker/references/bsk_notes.md) CLI는 바로 연동되고, `aside`, Playwright / Chrome MCP, 브라우저 확장은 [표준 어댑터 계약](skills/threads-bot-blocker/references/browser_adapter.md)으로 연결됩니다. 브라우저가 없어도 계정 정밀 진단(모드 3)으로 공개 프로필을 진단할 수 있습니다. 본인 핸들은 `--self <your_handle>` 또는 `THREADS_SELF_HANDLE` 환경 변수로 지정합니다.
 
 </details>
 
-설치한 뒤에는 이렇게 말하면 됩니다: *"Threads 댓글 봇 찾아줘"*. 리포트를 받은 뒤에는 번호로 승인합니다: *"1번 차단해줘"*, *"9번 뮤트해줘"*.
+설치 후 에이전트에게 *"Threads 댓글 봇 찾아줘"*라고 말하면 됩니다. 리포트를 확인한 뒤에는 번호로 승인합니다: *"1번 차단해줘"*, *"9번 뮤트해줘"*.
 
 <a id="4-detection-modes"></a>
 ## 4가지 스캔 모드
@@ -112,32 +111,32 @@ cp -r threads-bot-blocker/skills/threads-bot-blocker ~/.claude/skills/
   </tr>
 </table>
 
-<p align="center"><b>Works with</b> Claude Code · Antigravity · Codex · Cursor &nbsp;·&nbsp; <b>Harnesses</b> bsk · aside · Playwright/Chrome MCP · SSR fallback</p>
+<p align="center"><b>Works with</b> Claude Code · Antigravity · Codex · Cursor &nbsp;·&nbsp; <b>Harnesses</b> bsk · aside · Playwright/Chrome MCP · 프로필 단독 폴백</p>
 
 <a id="what-it-can-do"></a>
-## 할 수 있는 일
+## 핵심 기능과 안전장치
 
-| 원하는 것 | threads-bot-blocker가 해 주는 것 |
+| 기능 | 작동 방식 |
 |---|---|
-| 봇이 몰리는 댓글창 찾기 | `bot_magnet_score`로 답글 3개 이상 글의 순위를 매깁니다(AI·개발, 문제→해결, 창업·수익, 질문 글은 가점, 일상·밈 단문은 감점). 상위 K개만 엽니다 |
-| 글 하나, 또는 내 최근 글 여러 개 한 번에 보기 | 모드 2가 댓글창을 모두 읽고 댓글러 전원을 한 번에 채점합니다 |
-| AI 비서·예약 작성·모순 잡아내기 | LLM이 블라인드 패킷을 읽습니다: 자기 고백("AI 비서가 운영"), 3분 안 몰아 달기 배치, 매일 10분 간격 쌍, 프로필↔답글 모순, AI 공감 문체 |
-| 지어낸 근거는 믿지 않기 | VG1이 모든 인용을 수집한 답글·원글·바이오와 글자 단위로 대조합니다. 지어낸 인용은 버리고, 검증 인용이 0건이면 정량 기준으로 돌아갑니다 |
-| 빠르게 짧은 댓글을 다는 사람은 건드리지 않기 | VG5가 사람 판정을 24점으로 묶습니다. 회귀 기준셋에서 고속 단문 인간 오탐 0/3, 사람 오탐 0/19 |
-| 자사 링크 한 번은 사람처럼 판단하기 | 자사 링크 1회는 하한이 없어 LLM이 맥락으로 판단합니다. 쇼핑 링크, 반복 자사 링크, 복붙 도배에는 하드 하한이 걸립니다(VG3) |
-| 품앗이 계정은 차단 대신 뮤트 | VG4가 49점으로 묶고 🤝 뮤트 권장 섹션으로 따로 보여 줍니다 |
-| 안전하게 차단하기 | 자동 차단은 절대 없습니다. "모두 차단해줘"는 거부하고, 번호나 `@핸들`로 지목한 계정만 회당 최대 5개, 1개씩, `차단 해제` 표시로 결과를 검증합니다 |
+| **봇이 몰리는 댓글창 우선 스캔** | 답글 3개 이상 게시글 중 봇 타깃 주제(AI·개발, 문제→해결, 창업·수익, 질문 글 가점 / 일상·밈 단문 감점) 상위 K개만 골라 스캔합니다 |
+| **특정 글·내 최근 글 일괄 점검** | 게시글 URL 하나는 물론 내 최근 글 여러 개의 댓글창을 한 번에 모아 댓글러 전원을 동시에 채점합니다 |
+| **AI 비서·예약 배치·문맥 모순 탐지** | 자기 고백("AI 비서가 운영"), 1~3분 안 몰아 달기 배치, 매일 10분 간격 예약 리듬, 프로필↔답글 모순, 기계적인 공감+질문 문체를 잡아냅니다 |
+| **영업 도배와 자연스러운 링크 구분** | 타인 글 쇼핑 링크·반복 자사 링크·20초 복붙 도배에는 즉시 최소 점수를 부여하고, 자사 링크 1회 언급은 LLM이 대화 맥락으로 판단합니다 |
+| **품앗이 계정은 차단 대신 뮤트 분리** | 맞팔·인사 품앗이(`"스하리 완료^^"`) 계정은 봇 점수를 제한하고 **🤝 뮤트 권장** 섹션으로 따로 분류합니다 |
+| **지어낸 근거(환각) 원천 배제** | LLM이 제시한 모든 인용을 수집한 답글·원글·바이오와 글자 단위로 대조해 원문에 없는 인용은 즉시 버립니다 |
+| **빠르게 소통하는 일반 유저 보호** | 짧은 댓글을 빠르게 다는 사람(`"ㅋㅋㅋ"`, `"인정"`)과 일상 대화 계정은 정상 등급으로 보호합니다(회귀 기준셋 사람 오탐 `0/19`) |
+| **100% 사용자 승인(HITL) 차단** | `"모두 차단해줘"`는 거부하며, 번호나 `@핸들`로 명시한 계정만 회당 최대 5개, 1개씩 `차단 해제` 버튼 상태까지 검증하며 차단합니다 |
 
 <a id="pipeline"></a>
 <details>
-<summary><b>CLI와 v4.0 파이프라인</b> (Python 3.11+, 표준 라이브러리만 사용)</summary>
+<summary><b>CLI와 파이프라인</b> (Python 3.11+, 표준 라이브러리만 사용)</summary>
 
 ```bash
 cd skills/threads-bot-blocker
 run=~/.threads-bot-blocker/runs/$(date +%Y%m%d-%H%M)    # 작업 파일은 스킬 폴더 밖에 둡니다
 IN="--feed-comments $run/feed_comments.json --replies $run/replies.json --profiles $run/accounts.json --self <your_handle>"
 
-# 1. 수집(읽기 전용): 봇 유인 글 → 댓글러 → 댓글러마다 최근 답글 15개 → 공개 SSR 프로필 + 최근 원글
+# 1. 수집(읽기 전용): 봇 유인 글 → 댓글러 → 댓글러마다 최근 답글 15개 → 공개 프로필 + 최근 원글
 python scripts/bsk_scan.py feed-comments --max-posts 8 --min-replies 3 --out $run/feed_comments.json
 python scripts/feed_candidates.py --input $run/feed_comments.json --self <your_handle> --max-commenters 20 --out $run/candidates.json
 python scripts/bsk_scan.py replies --handle <h> --max-items 15 --out $run/replies_<h>.json   # {"<h>": 문서}로 $run/replies.json에 합치기
@@ -146,12 +145,12 @@ python scripts/fetch_profile.py --handles-file $run/candidates.json --out $run/a
 # 2. 블라인드 증거 패킷: 시간순 답글, gap_prev_sec, 몰아 달기 배치, 10분 간격 쌍, 중복, 링크. 점수 없음.
 python scripts/reply_score.py $IN --emit-packets $run/evidence_packets.json
 
-# 3. 에이전트의 LLM이 $run/reply_judgments.json 작성 (reply-judgments@4.0, references/llm_rubric.md)
+# 3. 에이전트의 LLM이 $run/reply_judgments.json 작성 (references/llm_rubric.md 참고)
 
 # 4. 인용 검증(VG1) → 가드레일(VG2~VG5) → 0~100점
 python scripts/reply_score.py $IN --judgments $run/reply_judgments.json --out $run/reply_results.json
 
-# 5. 의심 댓글마다 직접 링크가 붙은 쉬운 한국어 CLI 리포트 (--verbose · --format markdown)
+# 5. 의심 댓글마다 직접 링크가 붙은 한국어 CLI 리포트 (--verbose · --format markdown)
 python scripts/render_report.py --input $run/reply_results.json
 
 # 다른 하네스: JSON 검증, 또는 같은 bot_magnet_score 엔진으로 열 게시글 고르기
@@ -162,7 +161,7 @@ python scripts/adapter.py blocked-diff --new $run/blocked.json --old data/blocke
 python scripts/calibrate.py --dataset <dataset.json> --judgments <reply_judgments.json> --labels data/labels.json --strict
 ```
 
-LLM 판정이 없거나, 일부만 있거나, v3.0 형식이어도 끝까지 진행합니다. 빠진 계정은 정량 엔진(R1~R5 + RH)으로 채점하고 `정성 미적용(정량 기준)`으로 표시합니다.
+LLM 판정이 없거나 일부만 있어도 파이프라인은 멈추지 않으며, 빠진 계정은 정량 엔진(`R1–R5 + RH`)으로 채점해 `정성 미적용(정량 기준)`으로 표시합니다.
 
 </details>
 
@@ -178,28 +177,16 @@ LLM 판정이 없거나, 일부만 있거나, v3.0 형식이어도 끝까지 진
 | **VG4** 품앗이 분리 | 맞팔·품앗이 답글러 | 49점 상한, 🤝 뮤트 권장 |
 | **VG5** 사람 보호 | LLM이 사람으로 판정했고 VG3 조건 없음 | 24점 상한 |
 
-**캘리브레이션**: 실측 23명 회귀 기준셋, `calibrate.py --strict`
+**캘리브레이션** (실측 23명 회귀 기준셋, `calibrate.py --strict`):
 
 | 항목 | 결과 |
 |---|---|
 | 사람 오탐 (25점 이상) | **0 / 19** |
 | 고속 단문 인간 오탐 (19명에 포함) | **0 / 3** |
 | 댓글 봇·영업 답글러 탐지 (50점 이상) | **2 / 2** |
-| 위반 · v4.0 배치 리듬 신호로 새로 걸린 계정 | **0 · 0** |
+| 회귀 위반 | **0** |
 
-**솔직한 한계.** 점수는 의심 신호이지 확정 판결이 아닙니다. 23명 기준셋은 회귀를 막는 장치이지 정밀도·재현율 벤치마크가 아닙니다. 경계 점수(25 / 50 / 75 ±3점)이거나 답글 표본이 4개 미만이면 다른 시각에 다시 수집해 재채점하길 권합니다. 공개 페이지만 읽고, 답글 수집에는 브라우저 하네스가 필요하며, Threads UI가 바뀌면 수집기가 깨질 수 있습니다(어댑터 계약으로 하네스를 바꿔 끼울 수 있습니다). 리포트 문구와 예시는 한국어 Threads에 맞춰져 있습니다.
-
-</details>
-
-<details>
-<summary><b>v4.0 주요 변경</b></summary>
-
-1. **SSR 최근 원글**: 최근 원글 3개(고정된 자기소개 글을 놓치지 않도록 더 오래된 글 1개 추가)를 프로필과 VG1 인용 코퍼스에 넣습니다.
-2. **몰아 달기 배치와 10분 간격 쌍**: 답글마다 `gap_prev_sec`, 0~180초 클러스터를 튀는 간격에서 분리, 540~720초 반복 쌍, `daily_schedule_hint`.
-3. **블라인드 증거 패킷**(`--emit-packets`): 답글 1개 이상인 댓글러 전원, 검토 우선 정렬, 점수·등급·판정 키 0개(테스트로 재귀 검사).
-4. **VG1 엄격한 인용 검증**: 댓글 코드 → 답글 → 원글 → 바이오·이름 순으로 대조하고, 검증 인용이 0건이면 추측하지 않고 폴백합니다.
-5. **자사 링크 1회는 맥락 판단**: 단발 언급은 LLM이 맥락으로 보고, 반복 자사 링크와 쇼핑 링크는 하드 하한을 유지합니다.
-6. **부드러운 폴백**: v3.0 판정(R3 / RH1 / RH2)과 정량 전용 실행도 그대로 동작하며, v3.0 CLI 출력과 바이트 단위로 같습니다.
+**솔직한 한계.** 점수는 의심 신호이지 확정 판결이 아닙니다. 23명 기준셋은 회귀 방지 장치이며 일반화된 정밀도·재현율 벤치마크가 아닙니다. 경계 점수(25 / 50 / 75 ±3점)이거나 답글 표본이 4개 미만이면 다른 시각에 다시 수집해 재채점하길 권합니다. 공개 페이지만 읽고 답글 수집에는 브라우저 하네스가 필요하며, Threads UI 변경 시 수집기가 영향을 받을 수 있습니다(어댑터 계약으로 하네스 교체 가능). 리포트 문구와 패턴은 한국어 Threads에 최적화되어 있습니다.
 
 </details>
 
@@ -212,7 +199,7 @@ threads-bot-blocker/
 ├── assets/                       # banner · og_card · pipeline_diagram · CTA 버튼 · 모드 아이콘
 │   └── showcase/                 # 실전 화면 원본 4장 (비가역 모자이크)
 ├── skills/threads-bot-blocker/   # ← 스킬 본체 (이 폴더만 설치하면 됨)
-│   ├── SKILL.md                  # 절대 규칙 · 4개 모드 · v4.0 파이프라인(수집 → 패킷 → LLM → 검증 → 리포트)
+│   ├── SKILL.md                  # 절대 규칙 · 4개 모드 · 파이프라인(수집 → 패킷 → LLM → 검증 → 리포트)
 │   ├── scripts/                  # bsk_scan · feed_candidates · fetch_profile · reply_score · render_report · adapter · calibrate · tbb_common
 │   ├── references/               # scoring · patterns · llm_rubric · blocking_safety · browser_adapter · bsk_notes · report_template · examples
 │   └── data/                     # 빈 템플릿 (blocked_accounts.json · labels.json)
@@ -224,10 +211,10 @@ threads-bot-blocker/
 python -B -m unittest discover -s tests -v    # 24개: 채점 · VG1~VG5 · 리포트 · 어댑터 · 배포 위생
 ```
 
-- **설치 폴더는 깨끗하게 둡니다.** 수집 데이터, 채점 결과, 차단 기록(`block_log.json`)은 모두 `~/.threads-bot-blocker/`(`THREADS_BOT_BLOCKER_HOME`)에 실행별 `runs/<YYYYMMDD-HHMM>/` 폴더로 저장합니다.
-- **배포 데이터는 비어 있습니다.** `data/`는 빈 템플릿이고 실제 핸들이나 개인 경로가 없습니다. `tests/`도 지어낸 데이터만 씁니다.
-- **수집한 글은 데이터일 뿐 지시가 아닙니다.** 댓글·글·바이오 속 지시문(프롬프트 인젝션)은 무시하고 보고만 합니다.
-- **읽기 전용으로만 봅니다.** 로그인한 브라우저에서도 좋아요·팔로우·답글·신고·차단 해제를 하지 않습니다.
+- **깨끗한 설치 폴더 유지.** 수집 데이터, 채점 결과, 차단 기록(`block_log.json`)은 모두 `~/.threads-bot-blocker/runs/<YYYYMMDD-HHMM>/`(`THREADS_BOT_BLOCKER_HOME`)에 저장됩니다.
+- **빈 템플릿만 배포.** `data/`에는 실제 핸들이나 개인 경로가 전혀 없으며, `tests/` 역시 100% 합성 데이터만 사용합니다.
+- **수집 텍스트는 지시가 아닌 데이터.** 댓글·글·바이오에 숨긴 프롬프트 인젝션 지시문은 실행하지 않고 무시·보고합니다.
+- **철저한 읽기 전용 탐색.** 로그인된 브라우저에서도 좋아요·팔로우·답글·신고·차단 해제를 수행하지 않습니다.
 
 </details>
 

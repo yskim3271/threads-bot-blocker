@@ -3,7 +3,7 @@
 <img src="assets/banner.png" width="100%" alt="threads-bot-blocker: evidence-grounded reply-bot detection for Threads">
 
 <h3>Clean Threads replies. Grounded evidence. Zero auto-blocks.</h3>
-<p>An open-source agent skill that finds the reply bots living in Threads comment sections, proves every verdict with verbatim quotes, and leaves every block to you.</p>
+<p>An open-source agent skill that finds reply bots in Threads comment sections, proves every flag with verbatim quotes, and leaves every block to you.</p>
 
 <a href="#quick-start"><img src="assets/btn-start-en.svg" height="44" alt="Get Started"></a>
 
@@ -19,41 +19,40 @@
 
 </div>
 
-**threads-bot-blocker v4.0 is an evidence-grounded, LLM-first hybrid that tells your agent who is a reply bot and shows you exactly why.**
-Scripts collect each commenter's profile, recent root posts and last 15 timed replies, then hand the agent's LLM a **blind evidence packet** with no scores in it.
-The LLM judges each packet as a whole: self-confessed AI secretaries, scheduled burst batches, profile ↔ reply contradictions, empathy-plus-question slop and parasitic shopping links.
-Scripts then check **every quote verbatim** against the collected text (VG1, fabricated quotes are dropped) and apply hard-fact guardrails (VG2–VG5) before scoring 0–100.
-You get a plain-Korean CLI report with a direct link to every suspicious comment, and nothing is blocked until you name the account, one at a time.
+**threads-bot-blocker detects reply bots, AI auto-commenters, and link spammers in Threads comment sections—and proves every verdict with verbatim quotes.**
+Scripts collect each commenter's profile, recent posts, and last 15 timed replies into a score-free evidence packet so your agent's LLM can judge the full context without bias.
+Every quote the LLM cites is then checked character-for-character against collected text (hallucinated quotes are dropped) and passed through hard safety guardrails before scoring `0–100`.
+You get a clean CLI report with direct links to every suspicious comment, and nothing is ever blocked until you approve accounts one by one.
 
 ## How it works
 
 <div align="center">
 
-<img src="assets/pipeline_diagram.png" width="100%" alt="v4.0 pipeline: Collect, Evidence Packet, LLM Judge, Verify and Guard, Report and HITL">
+<img src="assets/pipeline_diagram.png" width="100%" alt="Pipeline: Collect, Evidence Packet, LLM Judge, Verify and Guard, Report and HITL">
 
-<sub>v4.0 in five stages: <b>scripts investigate</b> (blind evidence) → <b>the LLM judges</b> (with quotes) → <b>scripts verify</b> (VG1–VG5) → <b>you decide</b> (1-by-1 approved blocks).</sub>
+<sub>Five stages: <b>scripts collect</b> blind evidence → <b>the LLM judges</b> full context with quotes → <b>scripts verify</b> quotes & guardrails → <b>you approve</b> blocks one by one.</sub>
 
 </div>
 
-Below is a real scan of my 5 most recent posts (12 commenters · 4 flagged: **2 🔴 block recommended · 1 🟠 review · 1 🟡 watch** · 2 approved blocks). Handles, links and proper nouns are irreversibly mosaicked—the original glyphs were never rendered.
+A real scan of 5 recent posts (12 commenters · 4 flagged: **2 🔴 block recommended · 1 🟠 review · 1 🟡 watch** · 2 approved blocks). Handles and links are irreversibly mosaicked.
 
 ### 1. Scan & collect
-"Check my last 5 posts": opens the comment sections of your 5 most recent root posts, picks out 12 commenters, then collects each one's public profile with SSR recent root posts and up to 15 recent replies (read-only) into a blind `evidence_packets.json`.
+`"Check my last 5 posts"` opens the comment sections of your 5 latest posts, extracts 12 commenters, and collects each one's public profile, recent posts, and up to 15 timed replies in read-only mode.
 
 <img src="assets/showcase/01_scan_start.png" width="100%" alt="STEP 1: scan and collect">
 
 ### 2. Evidence-backed report
-`12 scanned · 4 flagged` (`90 🔴`, `82 🔴`, `56 🟠`, `32 🟡`): aligned summary table, then verbatim-verified evidence quotes—a pinned root post and a reply where the account admits an AI assistant runs it, plus direct clickable comment links—and a two-line block guide. Normal accounts stay out of the way.
+Flags 4 of 12 accounts (`90 🔴`, `82 🔴`, `56 🟠`, `32 🟡`) with an aligned summary table, character-verified quotes (including a pinned post and reply admitting an AI assistant runs the account), and clickable comment links. Normal accounts stay hidden.
 
 <img src="assets/showcase/02_bot_report.png" width="100%" alt="STEP 2: evidence-backed reply-bot report">
 
 ### 3. No blind bulk blocks
-"Block them all." is never executed. The agent refuses bulk blocking, re-displays the 4 flagged accounts, and asks for explicit numbers or `@handles` (max 5 per turn).
+`"Block them all."` is refused on the spot. The agent re-displays the 4 flagged accounts and asks for explicit numbers or `@handles` (max 5 per turn).
 
 <img src="assets/showcase/03_safety_guard.png" width="100%" alt="STEP 3: no blind bulk blocks">
 
 ### 4. Approved, verified blocks
-"Block #1 and #2": checks the profile handle match → `⋯` → Block → announces before confirming → verifies the `Unblock` state, 2/2 complete, logged to `block_log.json`. The remaining #3 and #4 stay untouched until you approve them.
+`"Block #1 and #2"` verifies each profile handle, announces before clicking Block, confirms the button flips to `Unblock` (2/2 complete, logged to `block_log.json`), and leaves #3 and #4 untouched.
 
 <img src="assets/showcase/04_hitl_block.png" width="100%" alt="STEP 4: approved, verified blocks">
 
@@ -89,11 +88,11 @@ git clone https://github.com/yskim3271/threads-bot-blocker
 cp -r threads-bot-blocker/skills/threads-bot-blocker ~/.claude/skills/
 ```
 
-**Requirements.** Python 3.11+ only, every script uses the standard library. To read comment sections the agent needs a read-only browser harness: the [`bsk`](skills/threads-bot-blocker/references/bsk_notes.md) CLI works out of the box, and `aside`, Playwright / Chrome MCP or an extension work through the [adapter contract](skills/threads-bot-blocker/references/browser_adapter.md). Without a browser, mode 3 still diagnoses public profiles. Your own handle is never hard-coded: pass `--self <your_handle>` or set `THREADS_SELF_HANDLE`.
+**Requirements.** Python 3.11+ (standard library only). Reading comment sections uses a read-only browser harness: [`bsk`](skills/threads-bot-blocker/references/bsk_notes.md) works out of the box, while `aside`, Playwright / Chrome MCP, or browser extensions connect via the [adapter contract](skills/threads-bot-blocker/references/browser_adapter.md). Without a browser, Account Deep Dive (Mode 3) still diagnoses public profiles. Pass your handle via `--self <your_handle>` or `THREADS_SELF_HANDLE`.
 
 </details>
 
-Then just ask: *"Find reply bots on my Threads feed."* (or in Korean, *"Threads 댓글 봇 찾아줘"*). After the report, approve by number: *"Block #1"*, *"Mute #9"*.
+Then ask your agent: *"Find reply bots on my Threads feed"* (or *"Threads 댓글 봇 찾아줘"*). After reviewing the report, approve by number: *"Block #1"*, *"Mute #9"*.
 
 ## 4 detection modes
 
@@ -109,31 +108,31 @@ Then just ask: *"Find reply bots on my Threads feed."* (or in Korean, *"Threads 
   </tr>
 </table>
 
-<p align="center"><b>Works with</b> Claude Code · Antigravity · Codex · Cursor &nbsp;·&nbsp; <b>Harnesses</b> bsk · aside · Playwright/Chrome MCP · SSR fallback</p>
+<p align="center"><b>Works with</b> Claude Code · Antigravity · Codex · Cursor &nbsp;·&nbsp; <b>Harnesses</b> bsk · aside · Playwright/Chrome MCP · Profile-only fallback</p>
 
-## What it can do
+## What it detects & why it's safe
 
-| What you want | What threads-bot-blocker gives you |
+| Capability | How it works |
 |---|---|
-| Find the comment sections bots love | `bot_magnet_score` ranks posts with 3+ replies (AI and dev, problem → fix, startup and income, questions up; daily memes down) and opens the top K |
-| Sweep one post, or several of your own | Mode 2 reads every comment section and scores all commenters together in one run |
-| Catch AI secretaries, cron posting and contradictions | The LLM reads blind packets: self-confessions ("run by my AI assistant"), 3-minute burst batches, daily 10-minute pairs, profile ↔ reply contradictions, AI empathy slop |
-| Never trust a made-up reason | VG1 matches every quote verbatim against collected replies, root posts and bio; fabricated quotes are dropped, and 0 verified quotes means a quantitative fallback |
-| Leave fast, chatty humans alone | VG5 caps human verdicts at 24; the regression set flags 0 of 3 fast short-reply humans and 0 of 19 humans |
-| Read a one-off own link like a person would | A single own-store link has no floor, so the LLM decides from context; shopping links, repeated own links and copy-paste bursts get hard floors (VG3) |
-| Mute follow-for-follow (품앗이) instead of blocking | VG4 caps those accounts at 49 and lists them in a separate 🤝 mute-recommended section |
-| Block safely | Never auto-blocks: "block them all" is refused, only accounts you name by number or `@handle`, max 5 per turn, one at a time, each verified by the `Unblock` state |
+| **Focus on bot-magnet posts** | Ranks feed posts with 3+ replies by topic (AI/dev, problem → fix, startups/income, open questions up; casual memes down) and scans the top K |
+| **Sweep your own posts at once** | Opens a single thread or batches your recent posts together to score every commenter in one run |
+| **Catch AI secretaries & cron bots** | Detects self-confessed AI assistants, 1–3 minute burst batches, daily 10-minute posting rhythms, profile-vs-reply contradictions, and empathy+question slop |
+| **Separate spam links from context** | Affiliate/shopping links and repeated self-promo trigger hard floors, while a single own-link mention is judged in context |
+| **Mute follow-for-follow (품앗이)** | Caps reciprocal greeting accounts (`"스하리 완료^^"`) below the bot threshold and separates them into a **🤝 Mute recommended** list |
+| **Reject hallucinated reasons** | Matches every LLM quote verbatim against collected replies, root posts, and bio; fabricated quotes are dropped automatically |
+| **Protect fast, chatty humans** | Caps verified human verdicts in the green tier (`0/19` humans and `0/3` rapid short-reply humans flagged on the regression set) |
+| **Enforce human-in-the-loop blocks** | Refuses `"block all"`, blocks only accounts you name by number or `@handle` (max 5/turn, 1-by-1), and verifies the `Unblock` UI state |
 
 <a id="pipeline"></a>
 <details>
-<summary><b>CLI & v4.0 pipeline</b> (Python 3.11+, standard library only)</summary>
+<summary><b>CLI & pipeline</b> (Python 3.11+, standard library only)</summary>
 
 ```bash
 cd skills/threads-bot-blocker
 run=~/.threads-bot-blocker/runs/$(date +%Y%m%d-%H%M)    # working files live outside the skill folder
 IN="--feed-comments $run/feed_comments.json --replies $run/replies.json --profiles $run/accounts.json --self <your_handle>"
 
-# 1. Collect (read-only): bot-magnet posts → commenters → 15 recent replies each → public SSR profiles + root posts
+# 1. Collect (read-only): bot-magnet posts → commenters → 15 recent replies each → public profiles + root posts
 python scripts/bsk_scan.py feed-comments --max-posts 8 --min-replies 3 --out $run/feed_comments.json
 python scripts/feed_candidates.py --input $run/feed_comments.json --self <your_handle> --max-commenters 20 --out $run/candidates.json
 python scripts/bsk_scan.py replies --handle <h> --max-items 15 --out $run/replies_<h>.json   # merge as {"<h>": doc} into $run/replies.json
@@ -142,7 +141,7 @@ python scripts/fetch_profile.py --handles-file $run/candidates.json --out $run/a
 # 2. Blind evidence packets: timed replies, gap_prev_sec, burst batches, 10-min pairs, duplicates, links. Zero scores.
 python scripts/reply_score.py $IN --emit-packets $run/evidence_packets.json
 
-# 3. The agent's LLM writes $run/reply_judgments.json (reply-judgments@4.0, see references/llm_rubric.md)
+# 3. The agent's LLM writes $run/reply_judgments.json (see references/llm_rubric.md)
 
 # 4. Verify quotes (VG1) → guardrails (VG2–VG5) → score 0–100
 python scripts/reply_score.py $IN --judgments $run/reply_judgments.json --out $run/reply_results.json
@@ -150,7 +149,7 @@ python scripts/reply_score.py $IN --judgments $run/reply_judgments.json --out $r
 # 5. Plain-Korean CLI report with a direct link to every suspicious comment (--verbose · --format markdown)
 python scripts/render_report.py --input $run/reply_results.json
 
-# Other harnesses: validate their JSON, or rank which posts to open with the same bot_magnet_score engine
+# Other harnesses: validate JSON or rank which posts to open with the same bot_magnet_score engine
 python scripts/adapter.py validate <file> --expect feed-comments
 python scripts/adapter.py rank-posts --input feed.json --top 8 --out $run/ranked.json
 # Mode 4: blocklist diff + calibration (weight changes are proposed as a diff only)
@@ -158,7 +157,7 @@ python scripts/adapter.py blocked-diff --new $run/blocked.json --old data/blocke
 python scripts/calibrate.py --dataset <dataset.json> --judgments <reply_judgments.json> --labels data/labels.json --strict
 ```
 
-No LLM judgment, a partial file or the v3.0 format? The run still finishes: missing accounts are scored by the quantitative engine (R1–R5 + RH) and marked `정성 미적용(정량 기준)`.
+If LLM judgments are omitted or partial, the pipeline falls back cleanly to the quantitative engine (`R1–R5 + RH`) and marks those accounts `정성 미적용(정량 기준)`.
 
 </details>
 
@@ -168,34 +167,22 @@ No LLM judgment, a partial file or the v3.0 format? The run still finishes: miss
 
 | Guardrail | Condition | Effect |
 |---|---|---|
-| **VG1** verbatim quotes | Every `evidence[].quote` (4+ chars, whitespace-insensitive) must appear in the collected replies, root posts, bio or name | Fabricated quotes are dropped with a warning; 0 verified quotes on a suspicious verdict → quantitative fallback |
+| **VG1** verbatim quotes | Every `evidence[].quote` (4+ chars, whitespace-insensitive) must appear in collected replies, root posts, bio, or name | Fabricated quotes are dropped with a warning; 0 verified quotes on a suspicious verdict → quantitative fallback |
 | **VG2** small sample | Fewer than 4 replies | Capped at 74, never 🔴 |
 | **VG3** hard-fact floors | Copy-paste burst (2+ within 20 s) / any shopping link / own link on others' posts 2+ times | Floor 75 / 50 / 50; a single own link has no floor |
 | **VG4** pumasi separation | Follow-for-follow (품앗이) repliers | Capped at 49, listed under 🤝 mute recommended |
 | **VG5** human protection | The LLM says human and no VG3 fact applies | Capped at 24 |
 
-**Calibration** on a 23-account real-world regression set, `calibrate.py --strict`:
+**Calibration** on a 23-account real-world regression set (`calibrate.py --strict`):
 
 | Check | Result |
 |---|---|
 | Humans flagged (score ≥ 25) | **0 / 19** |
 | Fast short-reply humans flagged (subset of the 19) | **0 / 3** |
 | Reply bots and sales repliers detected (score ≥ 50) | **2 / 2** |
-| Violations · new hits from the v4.0 batch-rhythm signal | **0 · 0** |
+| Regression violations | **0** |
 
-**Honest positioning.** Scores are suspicion signals, not verdicts. The 23-account set guards against regressions; it is not a precision or recall benchmark. Borderline scores (25 / 50 / 75 ± 3) and samples under 4 replies deserve a rescan at another time of day. The skill reads only public pages, needs a browser harness to collect replies, and its collectors can break when the Threads UI changes (the adapter contract lets you swap harnesses). Report wording and examples are tuned for Korean-language Threads.
-
-</details>
-
-<details>
-<summary><b>v4.0 highlights</b></summary>
-
-1. **SSR root posts**: the 3 most recent root posts (plus one older, so pinned self-introductions are not missed) join the profile and the VG1 quote corpus.
-2. **Burst batches & 10-minute cron pairs**: `gap_prev_sec` per reply, 0–180 s clusters split at outlier gaps, 540–720 s repeat pairs and a `daily_schedule_hint`.
-3. **Blind evidence packets** (`--emit-packets`): every commenter with 1+ reply, review-first ordering, and zero score, tier or verdict keys (checked recursively by tests).
-4. **VG1 strict quote grounding**: quotes are matched by comment code, then replies, root posts, bio and name; 0 verified quotes falls back instead of guessing.
-5. **Contextual one-off own links**: a single own-store mention is judged in context, while repeated own links and shopping links keep their hard floors.
-6. **Graceful fallback**: v3.0 judgments (R3 / RH1 / RH2) and quant-only runs still work, with byte-identical v3.0 CLI output.
+**Honest limits.** Scores are suspicion signals, not final verdicts. The 23-account set prevents regressions rather than claiming a universal precision/recall benchmark. Borderline scores (25 / 50 / 75 ± 3) and samples under 4 replies should be rescanned later. Collectors read public pages only and can break if Threads changes its UI (swap harnesses via the adapter contract). Report text and patterns are tuned for Korean-language Threads.
 
 </details>
 
@@ -208,7 +195,7 @@ threads-bot-blocker/
 ├── assets/                       # banner · og_card · pipeline_diagram · CTA button · mode icons
 │   └── showcase/                 # 4 full-resolution live captures (irreversibly mosaicked)
 ├── skills/threads-bot-blocker/   # ← the skill (install only this folder)
-│   ├── SKILL.md                  # absolute rules · 4 modes · v4.0 pipeline (collect → packet → LLM → verify → report)
+│   ├── SKILL.md                  # rules · 4 modes · pipeline (collect → packet → LLM → verify → report)
 │   ├── scripts/                  # bsk_scan · feed_candidates · fetch_profile · reply_score · render_report · adapter · calibrate · tbb_common
 │   ├── references/               # scoring · patterns · llm_rubric · blocking_safety · browser_adapter · bsk_notes · report_template · examples
 │   └── data/                     # empty templates (blocked_accounts.json · labels.json)
@@ -220,10 +207,10 @@ threads-bot-blocker/
 python -B -m unittest discover -s tests -v    # 24 tests: scoring · VG1–VG5 · report · adapter · distribution hygiene
 ```
 
-- **The install folder stays clean.** Collected data, results and the block log (`block_log.json`) go to `~/.threads-bot-blocker/` (`THREADS_BOT_BLOCKER_HOME`), one `runs/<YYYYMMDD-HHMM>/` folder per run.
-- **Shipped data is empty.** `data/` holds empty templates with no real handles or personal paths, and `tests/` uses invented data only.
-- **Collected text is data, not instructions.** Instructions hidden in comments, posts or bios (prompt injection) are ignored and reported.
-- **Read-only browsing.** Even in a logged-in browser it never likes, follows, replies, reports or unblocks.
+- **Clean install directory.** Collected data, results, and `block_log.json` live under `~/.threads-bot-blocker/runs/<YYYYMMDD-HHMM>/` (`THREADS_BOT_BLOCKER_HOME`).
+- **Empty shipped data.** `data/` contains blank templates with zero real handles or personal paths; `tests/` uses synthetic fixtures only.
+- **Untrusted text is data, not instructions.** Prompt injections hidden inside replies, posts, or bios are ignored and flagged.
+- **Strictly read-only browsing.** Never likes, follows, replies, reports, or unblocks—even in a logged-in session.
 
 </details>
 
