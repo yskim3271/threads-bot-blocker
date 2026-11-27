@@ -1,14 +1,15 @@
 # threads-bot-blocker
 
-![version](https://img.shields.io/badge/version-3.0.0-4fd1c5) ![python](https://img.shields.io/badge/python-3.11%2B%20stdlib%20only-3776ab) ![license](https://img.shields.io/badge/license-MIT-9ece6a) ![safety](https://img.shields.io/badge/auto--block-never-f7768e)
+![version](https://img.shields.io/badge/version-4.0.0-4fd1c5) ![python](https://img.shields.io/badge/python-3.11%2B%20stdlib%20only-3776ab) ![license](https://img.shields.io/badge/license-MIT-9ece6a) ![safety](https://img.shields.io/badge/auto--block-never-f7768e)
 
 > **TL;DR (English)**
 > An agent skill that finds Threads **reply bots**: accounts that live in *other people's* comment sections with copy-paste 품앗이 (follow-for-follow) replies, AI "empathy + question" parrot replies, or shopping and own-store link spam.
-> It scores each commenter 0–100 from their last 15 replies and prints a plain-Korean CLI report with a direct link to every suspicious comment.
+> v4.0 is evidence-grounded and LLM-first: scripts build a blind evidence packet per commenter (profile, recent root posts, timed replies, burst batches), the agent's LLM judges each packet holistically, and scripts verify every quote against the collected text (fabricated quotes are dropped) and apply hard-fact guardrails before scoring 0–100. Without an LLM judgment it falls back to the quantitative engine.
+> It prints a plain-Korean CLI report with a direct link to every suspicious comment.
 > It **never auto-blocks**. You approve accounts by number, and they are blocked one at a time, each block verified (max 5 per turn). Works with Claude Code, Antigravity (`agy`), Codex / Open Agents and Cursor.
 
 Threads에서 **남의 글 댓글창에 붙어 사는** 댓글 봇, 복붙 품앗이 댓글, 영업 링크 답글러를 진단하는 멀티 에이전트 스킬입니다. 차단·뮤트는 사용자가 직접 확인한 뒤에만 진행합니다.
-`v3.0.0` · Python 3.11+ 표준 라이브러리만 사용 · MIT
+`v4.0.0` · Python 3.11+ 표준 라이브러리만 사용 · MIT
 
 ---
 
@@ -38,10 +39,11 @@ Threads에서 **남의 글 댓글창에 붙어 사는** 댓글 봇, 복붙 품�
 
 1. **댓글 봇 단일 타겟**: 정보성 글을 쓰는 계정(원글 작성 봇)은 대상에서 뺍니다. 남의 글 댓글창에 기생하는 댓글 봇만 봅니다.
 2. **봇 유인 글 우선 스캔 (`bot_magnet_score`)**: AI·개발, 문제→해결, 창업·수익, 질문 글에 가점을 주고 일상·밈 단문은 감점합니다. 답글 3개 이상인 글(골든존)부터 댓글창을 엽니다.
-3. **0~100 채점 + 오탐 방지 게이트**
-   - 정량: R1 복붙·연사 · R2 시그니처 · R4 쇼핑·자사 링크 · R5 프로필 · RH3
-   - 블라인드 정성(LLM): R3 · RH1 · RH2. 수집 원문에 그대로 있는 인용만 점수로 인정합니다.
-   - 게이트 RG1~RG5: 강한 신호가 하나뿐이면 49점, 복붙·속도 증거 없이 🔴이거나 답글이 4개 미만이면 74점으로 상한을 둡니다. 사람이라는 반증이 강해도 49점이 상한입니다. 반대로 남의 글에 쇼핑·자사 링크를 달면 하한 50점(🟠)을 적용합니다. 회귀 테스트 기준 고속 단문 인간의 오탐은 0건입니다.
+3. **v4.0 증거 기반 LLM 우선 판정 (0~100)**
+   - **스크립트 = 조사관**: 댓글러마다 점수 없는 증거 패킷(`--emit-packets`)을 만듭니다. 프로필·최근 원글, 시간순 답글과 간격(`gap_prev_sec`), 3분 안 몰아 달기 배치, 매일 10분 간격 쌍, 중복·링크 개수가 들어갑니다.
+   - **LLM = 종합 판사**: 패킷 전체를 읽고 예약·배치 리듬, 프로필·원글·답글의 자기 고백("비서가 운영"), 프로필↔답글 모순, AI 공감 문체, 기생 영업과 단발 언급을 함께 판단합니다. 근거마다 원문 인용이 필수입니다.
+   - **스크립트 = 검증관**: 인용을 수집 원문과 글자 단위로 대조해 지어낸 인용을 버립니다(VG1). 검증된 인용이 0건이면 정량 엔진으로 돌아갑니다. 이어서 하드 팩트 가드레일을 적용합니다: 답글 4개 미만이면 74 상한(VG2), 복붙 도배 75·쇼핑 링크 50 하한(VG3), 품앗이 49 상한·뮤트 권장(VG4), 사람 판정 24 상한(VG5). 자사 링크 1회만 단 사람은 하한 없이 LLM 판단을 따릅니다.
+   - **정량 폴백(v3.0 호환)**: LLM 판정이 없거나 v3.0 형식이면 R1 복붙·연사·배치 리듬, R2 시그니처, R4 쇼핑·자사 링크, R5 프로필, RH 인간 반증과 RG1~RG5 게이트로 채점합니다. 회귀 기준 고속 단문 인간 오탐은 0건입니다.
 4. **쉬운 한국어 CLI 리포트**: 기호나 내부 용어 없이 읽히는 요약표와 증거 댓글을 보여 주고, 의심 댓글마다 `https://www.threads.com/@<handle>/post/<code>` 직접 링크를 붙입니다.
 5. **절대 자동 차단 금지 (HITL 안전장치)**
    - 브라우저 수집은 읽기 전용입니다. 좋아요·팔로우·답글·신고·차단 해제를 하지 않습니다.
@@ -98,7 +100,7 @@ threads-bot-blocker/
 ├── README.md · LICENSE (MIT) · .gitignore
 ├── assets/showcase/            # 실제 구동 화면 4장 (모자이크 처리)
 ├── skills/threads-bot-blocker/ # ← 스킬 본체 (이 폴더만 설치하면 됨)
-│   ├── SKILL.md                # 절대 규칙 · 4개 모드 · 진단 파이프라인
+│   ├── SKILL.md                # 절대 규칙 · 4개 모드 · v4.0 진단 파이프라인(수집 → 증거 패킷 → LLM 판정 → 검증·채점 → 리포트)
 │   ├── scripts/                # bsk_scan · feed_candidates · fetch_profile · reply_score · render_report · adapter · calibrate · tbb_common
 │   ├── references/             # scoring · patterns · llm_rubric · blocking_safety · browser_adapter · bsk_notes · report_template · examples
 │   └── data/                   # 빈 템플릿 (blocked_accounts.json · labels.json)

@@ -1,4 +1,4 @@
-"""threads-bot-blocker v3.0 공통 유틸 (표준 라이브러리만 사용) — 댓글 봇 단일 타겟.
+"""threads-bot-blocker v4.0 공통 유틸 (표준 라이브러리만 사용) — 댓글 봇 단일 타겟.
 
 - 공용 정규식(P5_KW)·UI 크롬 정제(clean_ui_text)·카드 반응 수(parse_counts)·봇 유인도(score_bot_magnet, rank_posts).
 
@@ -25,7 +25,7 @@ CACHE_DIR = WORK_DIR / "cache"
 RUNS_DIR = WORK_DIR / "runs"
 KST = dt.timezone(dt.timedelta(hours=9))
 PROFILE_URL = "https://www.threads.com/@{handle}"
-VERSION = "3.0.0"
+VERSION = "4.0.0"
 
 
 def setup_utf8() -> None:

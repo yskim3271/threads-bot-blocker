@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""reply_score.py(댓글 봇) 결과 JSON → 리포트 (threads-bot-blocker v3.0, 시안 B: 요약표 + 증거 댓글).
+"""reply_score.py(댓글 봇) 결과 JSON → 리포트 (threads-bot-blocker v4.0, 시안 B: 요약표 + 증거 댓글).
 
 기본 `--format cli`: 80~120컬럼 터미널용 텍스트(넓은 마크다운 표·HTML 없음, 한글·이모지 2칸 계산).
   1. 헤더 1줄   `Threads 댓글 봇 스캔 (YYYY-MM-DD HH:MM KST)  │  스캔 N명 · 감지 M명`
@@ -8,6 +8,8 @@
      + 필요할 때만 `참고:`. 사유·설명은 기호·분수·내부 용어 없이 일상 한국어로 쓴다.
   4. 차단 가이드 2줄
   정상 계정 관련 문구는 기본 출력에 전혀 없다. --verbose 에서만 세부 점수(세부·합계·지표)와 🟢 정상 목록을 덧붙인다.
+  v4.0 종합 판정(judgment_mode=llm_v4) 계정은 핵심 사유에 LLM이 쓴 summary_reasons를, [증거 댓글]에 원문 대조를 통과한
+  verified_evidence(답글·프로필 게시글·프로필 소개)를 쓴다. 그 밖(llm_v3·quant_only·quant_fallback)은 v3.0 표시 그대로.
 `--format markdown`: 같은 구조(5열 표 + [증거 댓글] + `[댓글 보기](url)`).
 
 사용:
@@ -156,8 +158,21 @@ def _r_short(k: str, r: dict) -> str:
     return R_SHORT.get(k) or _r_name(k, r)
 
 
+def _is_v4(r: dict) -> bool:
+    return r.get("judgment_mode") == "llm_v4"
+
+
+def _mode(r: dict) -> str:
+    m = r.get("judgment_mode")
+    if not m:
+        m = "llm_v3" if r.get("llm_status") == "judged" else "quant_only"
+    return f"{m}({r['category']})" if m == "llm_v4" and r.get("category") else m
+
+
 def _reasons(r: dict) -> list[str]:
-    """핵심 사유: +5 이상 강한 신호 최대 3개, 모자라면 약한 신호로 2개까지 채운다."""
+    """핵심 사유: v4.0 판정이면 LLM이 쓴 쉬운 사유(최대 3개). 아니면 +5 이상 강한 신호 최대 3개, 모자라면 약한 신호로 2개까지."""
+    if _is_v4(r) and r.get("summary_reasons"):
+        return [str(x) for x in r["summary_reasons"][:3]]
     pos = _r_items(r, True)
     pick = [k for k, v in pos if v >= 5][:3]
     for k, _ in pos:
@@ -201,6 +216,56 @@ def _evidence(kind: str, r: dict) -> list[dict]:
     while len(strong) < min(2, cap) and rest:
         strong.append(rest.pop(0))
     return strong
+
+
+SOURCE_LABEL = {"root_post": "프로필 게시글", "bio": "프로필 소개"}
+LINK_LABEL = {"reply": "댓글 보기", "root_post": "게시글 보기", "bio": "프로필 보기"}
+
+
+def _v4_items(kind: str, r: dict) -> list[dict]:
+    """v4.0 증거: 원문 대조를 통과한 verified_evidence 최대 cap건. 클릭할 댓글 링크가 하나도 없으면
+    정량 표본(samples)의 강한 댓글로 최대 2건(🤝 1건) 보충한다 → 언제나 의심 댓글 직접 링크가 있다."""
+    cap = EVIDENCE_CAP[kind]
+    items = [dict(v, _v4=True) for v in r.get("verified_evidence") or [] if isinstance(v, dict) and (v.get("quote") or v.get("text"))][:cap]
+    if not any(i.get("source_type") == "reply" and "/post/" in str(i.get("url") or "") for i in items):
+        have = {i.get("url") for i in items}
+        supp = [s for s in _evidence(kind, r) if s.get("url") and "/post/" in s["url"] and s["url"] not in have]
+        n = min(1 if kind == "pumasi" else 2, len(supp))
+        if n:
+            items = items[:max(1, cap - n)] + supp[:n]
+    return items
+
+
+def _v4_text(item: dict, room: int) -> str:
+    """증거 1줄: 답글은 원문(길면 인용 부분이 보이도록), 프로필 게시글·소개는 인용."""
+    text, quote = " ".join(str(item.get("text") or "").split()), " ".join(str(item.get("quote") or "").split())
+    if item.get("source_type") != "reply" or not text:
+        return truncate(quote or text, room)
+    shown = truncate(text, room)
+    if not quote or quote.rstrip("…") in shown.rstrip("…") or display_width(text) <= room:
+        return shown
+    return truncate(quote if text.startswith(quote) else "…" + quote, room)
+
+
+def _v4_explain(r: dict, item: dict) -> str:
+    """증거 2줄: '출처 · 이유' (대괄호 없음)."""
+    st = item.get("source_type")
+    why = str(item.get("why") or "").strip()
+    if st == "reply":
+        own = item.get("own_thread") or (item.get("reply_to") and item.get("reply_to") == r.get("handle"))
+        src = "본인 글 답글" if own else (f"@{item['reply_to']} 글 댓글" if item.get("reply_to") else "")
+    else:
+        src = SOURCE_LABEL.get(st, "")
+    return " · ".join(x for x in (src, why) if x)
+
+
+def _v4_url(r: dict, item: dict) -> str:
+    return item.get("url") or r.get("profile_url") or f"https://www.threads.com/@{r['handle']}"
+
+
+def _batches_text(r: dict) -> str:
+    bs = (r.get("metrics") or {}).get("burst_batches") or []
+    return " · ".join(f"{b.get('count')}건({b.get('gap_min')}~{b.get('gap_max')}초, 평균{_fmt(round(b.get('mean_len') or 0))}자)" for b in bs)
 
 
 def _span_text(sec: int) -> str:
@@ -271,7 +336,16 @@ def _url_line(url: str, width: int, indent: int = 7) -> str:
 
 def _reply_verbose(r: dict, width: int, ind: str = "     ") -> list[str]:
     m = r.get("metrics") or {}
-    L = wrap_tokens(f"{ind}세부: ", [f"{k}{v:+g}" for k, v in (r.get("items") or {}).items() if isinstance(v, (int, float))], width, sep=" ")
+    head = [_mode(r)]
+    if _is_v4(r):
+        head += [f"LLM {_fmt(r.get('llm_score'))}점 → {_fmt(r.get('total'))}점", f"정량 참고 {_fmt(r.get('quant_total'))}점",
+                 f"검증 인용: {len(r.get('verified_evidence') or [])}건"]
+    L = wrap_tokens(f"{ind}판정방식: ", head, width)
+    if _batches_text(r):
+        L += wrap_tokens(f"{ind}배치: ", _batches_text(r).split(" · "), width)
+    for sig in (m.get("daily_schedule_hint") or {}).get("signals") or []:
+        L.append(fit(f"{ind}일정 힌트: {sig}", width))
+    L += wrap_tokens(f"{ind}{'정량 세부' if _is_v4(r) else '세부'}: ", [f"{k}{v:+g}" for k, v in (r.get("items") or {}).items() if isinstance(v, (int, float))], width, sep=" ")
     cats = r.get("categories") or {}
     L += wrap_tokens(f"{ind}합계: ", [" ".join(f"{c}={_fmt(v)}" for c, v in cats.items()), f"raw {_fmt(r.get('raw'))} → {_fmt(r.get('total'))}"]
                      + ([f"게이트 {','.join(r['gates'])}"] if r.get("gates") else [])
@@ -336,8 +410,21 @@ def _evidence_block(kind: str, r: dict, n: int, width: int, verbose: bool) -> li
     head = f"  {n}. @{r['handle']}  ({url})"
     L = [head] if display_width(head) <= width else [fit(f"  {n}. @{r['handle']}", width), _url_line(url, width, 5)]
     pre, ind = "     • ", " " * 7
-    for s in _evidence(kind, r):
-        room = max(12, width - display_width(pre) - 2)
+    room = max(12, width - display_width(pre) - 2)
+    if _is_v4(r) and r.get("verified_evidence"):
+        for it in _v4_items(kind, r):
+            if it.get("_v4"):
+                L.append(fit(f"{pre}\"{_v4_text(it, room)}\"", width))             # 1줄: 댓글 원문/인용
+                why = _v4_explain(r, it)
+                url = _v4_url(r, it)
+            else:                                                                   # 링크 보충(정량 표본)
+                L.append(fit(f"{pre}\"{truncate(it.get('text') or '', room)}\"", width))
+                why, url = _ev_explain(kind, r, it), it.get("url")
+            if why:
+                L += wrap_text(ind, why, width, cont=ind)                           # 2줄: 출처 · 쉬운 설명
+            if url:
+                L.append(_url_line(url, width))                                     # 3줄: 직접 링크(자르지 않음)
+    for s in ([] if _is_v4(r) and r.get("verified_evidence") else _evidence(kind, r)):
         L.append(fit(f"{pre}\"{truncate(s.get('text') or '', room)}\"", width))       # 1줄: 댓글 원문
         why = _ev_explain(kind, r, s)
         if why:
@@ -408,10 +495,15 @@ def render_reply_markdown(doc, title: str | None = None, verbose: bool = False) 
         L += ["", "### [증거 댓글]"]
         for kind, r in c["numbered"]:
             L += ["", f"**{num[r['handle']]}. [@{r['handle']}]({r.get('profile_url', '')})**", ""]
-            for s in _evidence(kind, r):
-                why = _ev_explain(kind, r, s)
-                link = f" — [댓글 보기]({s['url']})" if s.get("url") else ""
-                L.append(f"- \"{_cell(truncate(s.get('text') or '', 120))}\"{link}" + ("  " if why else ""))
+            v4 = _is_v4(r) and r.get("verified_evidence")
+            for s in (_v4_items(kind, r) if v4 else _evidence(kind, r)):
+                if s.get("_v4"):
+                    text, why = _v4_text(s, 120), _v4_explain(r, s)
+                    link = f" — [{LINK_LABEL.get(s.get('source_type'), '댓글 보기')}]({_v4_url(r, s)})"
+                else:
+                    text, why = truncate(s.get("text") or "", 120), _ev_explain(kind, r, s)
+                    link = f" — [댓글 보기]({s['url']})" if s.get("url") else ""
+                L.append(f"- \"{_cell(text)}\"{link}" + ("  " if why else ""))
                 if why:
                     L.append(f"  {_cell(why)}")
             note = _note(r) if kind != "pumasi" else ""

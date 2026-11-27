@@ -230,6 +230,98 @@ class TestAdapter(unittest.TestCase):
         self.assertTrue(tbb_common.score_bot_magnet(meme)["is_low_yield"])
 
 
+def secretary_bot():
+    """합성 AI 비서 봇: 고정 원글 자기 고백 + 하루 두 번 46~59초 간격 장문 5개 배치(사이에 수동 답글 178초)."""
+    long_texts = [f"{t} 이야기를 보니 결국 방향이 제일 중요하더라고요. 작은 실험부터 기록해 두시면 다음 단계가 훨씬 수월해질 거예요."
+                  for t in ("첫 출시", "가격 실험", "온보딩", "리텐션", "광고 효율", "팀 회고", "기획 문서", "디자인 시안", "테스트 빌드", "로드맵")]
+    times, t = [], BASE_TS
+    for gaps in ([59, 48, 50, 56, 178], [58, 46, 47, 52]):
+        times.append(t)
+        for g in gaps:
+            t += g
+            times.append(t)
+        t += 14000
+    texts = long_texts[:5] + ["댓글도 비서에게 맡겨 봤어요 ㅎㅎ"] + long_texts[5:10]
+    reps = [{"code": f"SB{i}", "taken_at": ts, "reply_to_author": f"writer_{i}", "parent_excerpt": f"개발 일지 {i}", "text": x}
+            for i, (ts, x) in enumerate(zip(times, texts))]
+    prof = {"username": "example_secretary", "full_name": "Example Mate", "biography": "AI 에이전트를 직접 만듭니다", "follower_count": 90,
+            "bio_links": []}
+    threads = [{"thread_id": "T1", "posts": [{"code": "SBROOT", "author": "example_secretary", "taken_at": BASE_TS - 864000,
+                                              "taken_at_kst": tbb_common.kst_iso(BASE_TS - 864000), "is_reply": False,
+                                              "text": "안녕하세요. 대표님의 비서 봇 미나입니다. 일정과 SNS를 대신 챙겨요."}]}]
+    accs, _ = reply_score.load_reply_accounts(replies={"example_secretary": reps},
+                                              profiles=[{"handle": "example_secretary", "status": "ok", "profile": prof, "threads": threads}])
+    return accs[0]
+
+
+def _judge(acc, judgment, strict=True):
+    return reply_score.score_reply_account(reply_score.compute_reply_bot_features(acc), judgment, strict)
+
+
+V4_SECRETARY = {"handle": "example_secretary", "category": "ai_bot", "score": 88,
+                "summary_reasons": ["AI 비서 운영 고백", "1분 간격 몰아 달기"],
+                "evidence": [{"code": "", "quote": "대표님의 비서 봇 미나입니다", "why": "AI 비서가 운영한다고 스스로 소개"},
+                             {"code": "SB5", "quote": "댓글도 비서에게 맡겨 봤어요", "why": "댓글을 AI에게 맡긴다고 직접 밝힘"}],
+                "human_counter_evidence": "반증 없음"}
+
+
+class TestV4EvidenceFirst(unittest.TestCase):
+    def test_burst_batches_and_root_posts(self):
+        acc = secretary_bot()
+        self.assertEqual(acc["root_posts"][0]["code"], "SBROOT")
+        f = reply_score.compute_reply_bot_features(acc)
+        self.assertEqual([b["count"] for b in f["burst_batches"]], [5, 5])
+        self.assertEqual(f["burst_batches"][0]["gaps_sec"], [59, 48, 50, 56])
+        q = reply_score.score_reply_account(f)
+        self.assertEqual(q["judgment_mode"], "quant_only")
+        self.assertEqual(q["items"].get("R1_rhythm"), 12)
+        self.assertEqual(scored([fast_short_human()])[0]["items"].get("R1_rhythm"), None)
+
+    def test_emit_packets_blind(self):
+        with tempfile.TemporaryDirectory() as td:
+            rp = Path(td) / "replies.json"
+            acc = copy_paste_bot()
+            rp.write_text(json.dumps({"example_copybot": [dict(r, reply_to_author=r["reply_to"], text=r["raw"]) for r in acc["replies"]],
+                                      "example_human": [dict(r, reply_to_author=r["reply_to"], text=r["raw"]) for r in chatty_human()["replies"]]},
+                                     ensure_ascii=False), encoding="utf-8")
+            out = Path(td) / "evidence_packets.json"
+            cp = run_script("reply_score.py", "--replies", str(rp), "--emit-packets", str(out))
+            self.assertEqual(cp.returncode, 0, cp.stderr.decode("utf-8", "replace"))
+            pk = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(pk["schema"], "threads-bot-blocker/evidence-packets@4.0")
+        self.assertEqual([a["handle"] for a in pk["accounts"]], ["example_copybot", "example_human"])
+        text = json.dumps(pk, ensure_ascii=False)
+        for bad in ('"total"', '"tier"', '"score"', '"items"', '"gates"', '"labels"', '"needs_llm"', "차단권장"):
+            self.assertNotIn(bad, text)
+        self.assertIn("gap_prev_sec", text)
+
+    def test_vg1_grounded_and_fabricated(self):
+        r = _judge(secretary_bot(), V4_SECRETARY)
+        self.assertEqual((r["judgment_mode"], r["total"], r["tier"]), ("llm_v4", 88, "🔴"))
+        self.assertEqual({v["source_type"] for v in r["verified_evidence"]}, {"root_post", "reply"})
+        cli = render_report.render(reply_score.build_doc([r], []))
+        self.assertIn("AI 비서 운영 고백 · 1분 간격 몰아 달기", cli)
+        self.assertIn("프로필 게시글 · AI 비서가 운영한다고 스스로 소개", cli)
+        self.assertIn("https://www.threads.com/@example_secretary/post/SB5", cli)
+        fake = dict(V4_SECRETARY, evidence=[{"quote": "원문에 전혀 없는 지어낸 문장입니다", "why": "환각"}])
+        fb = _judge(secretary_bot(), fake)
+        self.assertEqual(fb["judgment_mode"], "quant_fallback")
+        self.assertTrue(any("검증된 원문 인용 0건" in w for w in fb["warnings"]))
+        self.assertLess(fb["total"], 88)
+
+    def test_vg3_floors_and_vg5_human(self):
+        r = _judge(copy_paste_bot(), {"category": "uncertain", "score": 10, "evidence": [{"quote": "우리 앱 무료 체험 중이에요"}]})
+        self.assertEqual(r["total"], 75)
+        self.assertIn("VG3_dup_burst", r["gates"])
+        r = _judge(shop_link_drop(), {"category": "human", "score": 5, "evidence": [{"quote": "피곤할 땐 이거 추천합니다"}]})
+        self.assertEqual((r["total"], r["gates"]), (50, ["VG3_shop_link"]))
+        r = _judge(chatty_human(), {"category": "human", "score": 40, "evidence": [{"quote": "강아지가 맨날 소파 차지함"}]})
+        self.assertEqual((r["total"], r["tier"], r["gates"]), (24, "🟢", ["VG5"]))
+        r = _judge(pumasi_replier(), {"category": "pumasi", "score": 70, "evidence": [{"quote": "스하리 완료~ 맞팔해요"}]})
+        self.assertEqual((r["total"], r["pumasi_section"]), (49, True))
+        self.assertIn("🤝 뮤트권장", render_report.render(reply_score.build_doc([r], [])))
+
+
 class TestHygiene(unittest.TestCase):
     def _files(self):
         return [p for p in SKILL.rglob("*") if p.is_file()]
@@ -275,7 +367,7 @@ class TestHygiene(unittest.TestCase):
         text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("---\nname: threads-bot-blocker\n"))
         self.assertIn("자동 차단 금지", text)
-        self.assertEqual(tbb_common.VERSION, "3.0.0")
+        self.assertEqual(tbb_common.VERSION, "4.0.0")
 
 
 if __name__ == "__main__":
