@@ -1,19 +1,18 @@
 <div align="center">
 
-<a href="#실제로-보기"><img src="assets/banner.png" width="100%" alt="threads-bot-blocker: 원문 근거로 판정하는 Threads 댓글 봇 진단 스킬"></a>
+<img src="assets/banner.png" width="100%" alt="threads-bot-blocker: 원문 근거로 판정하는 Threads 댓글 봇 진단 스킬">
 
 <h3>깨끗한 Threads 댓글창. 원문 검증 근거. 자동 차단 제로.</h3>
 <p>Threads 댓글창에 기생하는 댓글 봇을 찾아내고, 모든 판정을 원문 인용으로 증명하며, 차단은 끝까지 사용자에게 맡기는 오픈소스 에이전트 스킬.</p>
 
-<a href="#실제로-보기"><img src="assets/btn-showcase-ko.svg" height="44" alt="실전 화면 보기"></a>&nbsp;
 <a href="#빠른-시작"><img src="assets/btn-start-ko.svg" height="44" alt="시작하기"></a>
 
 <p>
 <a href="README.md">English</a> · <b>한국어</b>
 <br>
-<a href="#실제로-보기">실제로 보기</a> ·
-<a href="#4가지-스캔-모드">4가지 모드</a> ·
+<a href="#작동-방식">작동 방식</a> ·
 <a href="#빠른-시작">빠른 시작</a> ·
+<a href="#4가지-스캔-모드">4가지 모드</a> ·
 <a href="#pipeline">파이프라인</a> ·
 <a href="#guardrails">가드레일</a>
 </p>
@@ -26,14 +25,10 @@ LLM은 패킷 전체를 읽고 종합 판정합니다. AI 비서 운영 고백, 
 그다음 스크립트가 **모든 인용을 수집 원문과 글자 단위로 대조**하고(VG1, 지어낸 인용은 제외), 하드 팩트 가드레일(VG2~VG5)을 적용해 0~100점을 냅니다.
 결과는 의심 댓글마다 직접 링크가 붙은 쉬운 한국어 CLI 리포트로 나오고, 사용자가 계정을 직접 지목하기 전에는 아무것도 차단하지 않습니다. 차단도 1개씩 진행합니다.
 
-<a id="see-it-in-action"></a>
-## 실제로 보기
+<a id="how-it-works"></a>
+## 작동 방식
 
 <div align="center">
-
-<img src="assets/showcase_flow.gif" width="100%" alt="실전 4단계: 봇 유인 글 스캔, 쉬운 한국어 리포트, 일괄 차단 거부, 1개씩 검증 차단">
-
-<sub>실제 홈 피드 스캔 화면: 글 12개 · 댓글러 88명 · 감지 9명. 핸들, 링크, 제3자 앱 이름은 비가역 모자이크로 가렸습니다(원문 글자를 한 번도 그리지 않았습니다).</sub>
 
 <img src="assets/pipeline_diagram.png" width="100%" alt="v4.0 파이프라인: 수집, 증거 패킷, LLM 판정, 검증과 가드레일, 리포트와 HITL">
 
@@ -41,28 +36,27 @@ LLM은 패킷 전체를 읽고 종합 판정합니다. AI 비서 운영 고백, 
 
 </div>
 
-<details>
-<summary><b>실전 화면 원본 4장 보기 (STEP 1~4)</b></summary>
+아래는 실제 홈 피드에서 돌려 본 4단계 흐름입니다(글 12개 · 댓글러 88명 · 감지 9명 · 승인 차단 5명). 핸들, 링크, 제3자 앱 이름은 비가역 모자이크로 가렸습니다(원문 글자를 한 번도 그리지 않았습니다).
 
-<br>
-
-**STEP 1 · 봇 유인 글 우선 스캔.** "Threads 댓글 봇 찾아줘" → "12개 하자": 글 12개, 댓글 151개, 후보 20명, 후보마다 최근 답글 15개.
+### 1. 봇 유인 글 우선 스캔
+"Threads 댓글 봇 찾아줘" → "12개 하자": 봇이 꼬이기 쉬운 글(AI·개발, 문제 해결, 질문 글, 답글 3개 이상) 12개를 골라 댓글 151개에서 후보 20명을 추리고, 후보마다 공개 프로필과 최근 답글 15개를 읽기 전용으로 수집합니다.
 
 <img src="assets/showcase/01_scan_start.png" width="100%" alt="STEP 1: 봇 유인 글 우선 스캔">
 
-**STEP 2 · 댓글 봇 진단 리포트.** `스캔 88명 · 감지 9명`: 요약표, 의심 댓글 직접 링크가 붙은 증거 댓글, 차단 가이드 2줄.
+### 2. 쉬운 한국어 진단 리포트 + 직접 링크
+`스캔 88명 · 감지 9명`: 칼정렬 요약표, 의심 댓글 원문과 쉬운 설명, 클릭해 바로 확인할 수 있는 댓글 직접 링크, 차단 가이드 2줄만 깔끔하게 보여 줍니다(정상 계정은 기본 화면에서 숨깁니다).
 
 <img src="assets/showcase/02_bot_report.png" width="100%" alt="STEP 2: 댓글 봇 진단 리포트">
 
-**STEP 3 · 일괄 차단 자동 거부.** "모두 차단해줘."는 실행하지 않습니다. 목록을 다시 보여 주고 번호나 @핸들을 직접 적어 달라고 요청합니다.
+### 3. 일괄 차단 자동 거부 (안전장치)
+"모두 차단해줘." 같은 일괄 요청은 바로 실행하지 않습니다. 목록을 다시 보여 주고 차단할 번호나 `@핸들`을 직접 명시해 달라고 요구합니다(회당 최대 5개).
 
 <img src="assets/showcase/03_safety_guard.png" width="100%" alt="STEP 3: 일괄 차단 자동 거부">
 
-**STEP 4 · 1개씩 검증 차단.** "1/2/3/4/5번 차단해줘": 핸들 일치 → `⋯` → 차단 → 확인 → `차단 해제` 상태 검증, 5/5 완료 후 `block_log.json`에 기록.
+### 4. 명시 승인 → 1개씩 검증 차단
+"1/2/3/4/5번 차단해줘": 계정마다 프로필 핸들 일치 확인 → `⋯` → 차단 → 확인 직전 재고지 → `차단 해제` 버튼 상태까지 검증한 뒤 `block_log.json`에 기록합니다.
 
 <img src="assets/showcase/04_hitl_block.png" width="100%" alt="STEP 4: 승인한 5명을 1개씩 차단하고 검증">
-
-</details>
 
 <a id="quick-start"></a>
 ## 빠른 시작
@@ -215,7 +209,7 @@ LLM 판정이 없거나, 일부만 있거나, v3.0 형식이어도 끝까지 진
 ```text
 threads-bot-blocker/
 ├── .claude-plugin/               # Claude Code 플러그인 + 마켓플레이스 매니페스트
-├── assets/                       # banner · og_card · showcase_flow.gif · pipeline_diagram · CTA 버튼 · 모드 아이콘
+├── assets/                       # banner · og_card · pipeline_diagram · CTA 버튼 · 모드 아이콘
 │   └── showcase/                 # 실전 화면 원본 4장 (비가역 모자이크)
 ├── skills/threads-bot-blocker/   # ← 스킬 본체 (이 폴더만 설치하면 됨)
 │   ├── SKILL.md                  # 절대 규칙 · 4개 모드 · v4.0 파이프라인(수집 → 패킷 → LLM → 검증 → 리포트)

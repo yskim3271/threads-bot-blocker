@@ -1,19 +1,18 @@
 <div align="center">
 
-<a href="#see-it-in-action"><img src="assets/banner.png" width="100%" alt="threads-bot-blocker: evidence-grounded reply-bot detection for Threads"></a>
+<img src="assets/banner.png" width="100%" alt="threads-bot-blocker: evidence-grounded reply-bot detection for Threads">
 
 <h3>Clean Threads replies. Grounded evidence. Zero auto-blocks.</h3>
 <p>An open-source agent skill that finds the reply bots living in Threads comment sections, proves every verdict with verbatim quotes, and leaves every block to you.</p>
 
-<a href="#see-it-in-action"><img src="assets/btn-showcase-en.svg" height="44" alt="See Live Scan"></a>&nbsp;
 <a href="#quick-start"><img src="assets/btn-start-en.svg" height="44" alt="Get Started"></a>
 
 <p>
 <b>English</b> · <a href="README.ko.md">한국어</a>
 <br>
-<a href="#see-it-in-action">See it in action</a> ·
-<a href="#4-detection-modes">4 Modes</a> ·
+<a href="#how-it-works">How it works</a> ·
 <a href="#quick-start">Quick Start</a> ·
+<a href="#4-detection-modes">4 Modes</a> ·
 <a href="#pipeline">Pipeline</a> ·
 <a href="#guardrails">Guardrails</a>
 </p>
@@ -26,13 +25,9 @@ The LLM judges each packet as a whole: self-confessed AI secretaries, scheduled 
 Scripts then check **every quote verbatim** against the collected text (VG1, fabricated quotes are dropped) and apply hard-fact guardrails (VG2–VG5) before scoring 0–100.
 You get a plain-Korean CLI report with a direct link to every suspicious comment, and nothing is blocked until you name the account, one at a time.
 
-## See it in action
+## How it works
 
 <div align="center">
-
-<img src="assets/showcase_flow.gif" width="100%" alt="Four-step live run: bot-magnet feed scan, plain-Korean report, bulk block refused, verified one-by-one blocks">
-
-<sub>A real home-feed scan: 12 posts · 88 commenters · 9 flagged. Handles, links and third-party app names are irreversibly mosaicked (the original glyphs were never rendered).</sub>
 
 <img src="assets/pipeline_diagram.png" width="100%" alt="v4.0 pipeline: Collect, Evidence Packet, LLM Judge, Verify and Guard, Report and HITL">
 
@@ -40,28 +35,27 @@ You get a plain-Korean CLI report with a direct link to every suspicious comment
 
 </div>
 
-<details>
-<summary><b>Inspect all 4 full-resolution live captures (STEP 1–4)</b></summary>
+Below is a real home-feed scan (12 posts · 88 commenters · 9 flagged · 5 approved blocks). Handles, links and third-party app names are irreversibly mosaicked—the original glyphs were never rendered.
 
-<br>
-
-**STEP 1 · Bot-magnet feed scan.** "Find reply bots" → "Let's do 12": 12 posts, 151 comments, 20 candidates, 15 recent replies each.
+### 1. Bot-magnet feed scan
+"Find reply bots" → "Let's do 12": opens the 12 highest-yield posts (AI/dev, problem → fix, questions; 3+ replies), gathers 151 comments and 20 candidate commenters, then collects each commenter's profile and 15 recent replies (read-only).
 
 <img src="assets/showcase/01_scan_start.png" width="100%" alt="STEP 1: bot-magnet feed scan">
 
-**STEP 2 · Plain-Korean report.** `88 scanned · 9 flagged`: summary table, evidence quotes with direct comment links, a two-line block guide.
+### 2. Plain-Korean report with direct links
+`88 scanned · 9 flagged`: aligned summary table, evidence quotes with plain-Korean explanations and direct clickable comment links, plus a two-line block guide. Normal accounts stay out of the way.
 
 <img src="assets/showcase/02_bot_report.png" width="100%" alt="STEP 2: reply-bot report">
 
-**STEP 3 · Bulk block refused.** "Block them all." is not executed; the list is shown again and explicit numbers or @handles are requested.
+### 3. Bulk block refused (safety guardrail)
+"Block them all." is never executed. The agent refuses bulk blocking, re-displays the list, and asks for explicit numbers or `@handles` (max 5 per turn).
 
 <img src="assets/showcase/03_safety_guard.png" width="100%" alt="STEP 3: bulk block refused">
 
-**STEP 4 · Verified 1-by-1 blocks.** "Block 1/2/3/4/5": handle match → `⋯` → Block → confirm → `Unblock` state verified, 5/5, logged to `block_log.json`.
+### 4. Verified 1-by-1 blocks
+"Block 1/2/3/4/5": checks the profile handle match → `⋯` → Block → announces before confirming → verifies the `Unblock` state, 5/5 complete, logged to `block_log.json`.
 
 <img src="assets/showcase/04_hitl_block.png" width="100%" alt="STEP 4: five approved accounts blocked and verified one at a time">
-
-</details>
 
 ## Quick Start
 
@@ -211,7 +205,7 @@ No LLM judgment, a partial file or the v3.0 format? The run still finishes: miss
 ```text
 threads-bot-blocker/
 ├── .claude-plugin/               # Claude Code plugin + marketplace manifests
-├── assets/                       # banner · og_card · showcase_flow.gif · pipeline_diagram · CTA buttons · mode icons
+├── assets/                       # banner · og_card · pipeline_diagram · CTA button · mode icons
 │   └── showcase/                 # 4 full-resolution live captures (irreversibly mosaicked)
 ├── skills/threads-bot-blocker/   # ← the skill (install only this folder)
 │   ├── SKILL.md                  # absolute rules · 4 modes · v4.0 pipeline (collect → packet → LLM → verify → report)
